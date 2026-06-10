@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { DocumentChecklist, type ChecklistDocument } from "@/components/documents/document-checklist";
 import { Separator } from "@/components/ui/separator";
 import { ApplicationEditor } from "./application-editor";
+import { OfferBanner } from "./offer-banner";
 
 export const metadata = { title: "Application" };
 
@@ -48,6 +49,15 @@ export default async function ApplicationPage({
 
   const parsed = version ? formSchemaSchema.safeParse(version.schema) : null;
   if (!parsed?.success) notFound();
+
+  const { data: pendingOffer } = await supabase
+    .from("offers")
+    .select("id, expires_at")
+    .eq("application_id", id)
+    .eq("status", "pending")
+    .order("extended_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; expires_at: string | null }>();
 
   let checklist: ChecklistDocument[] = [];
   if (application.submitted_at) {
@@ -95,6 +105,9 @@ export default async function ApplicationPage({
       </div>
       {parsed.data.description && (
         <p className="text-sm text-muted-foreground">{parsed.data.description}</p>
+      )}
+      {pendingOffer && (!pendingOffer.expires_at || Date.parse(pendingOffer.expires_at) > Date.now()) && (
+        <OfferBanner school={school} offerId={pendingOffer.id} expiresAt={pendingOffer.expires_at} />
       )}
       {application.submitted_at && checklist.length > 0 && (
         <>
