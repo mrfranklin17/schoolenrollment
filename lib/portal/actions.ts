@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantBySlug, requireUser } from "@/lib/tenant";
 import { formSchemaSchema, validateResponses, type FormResponses } from "@/lib/forms/schema";
+import { sendTemplatedEmail } from "@/lib/email/send";
 
 export type PortalActionState =
   | { error?: string; ok?: boolean; fieldErrors?: Record<string, string> }
@@ -287,6 +288,15 @@ export async function submitApplication(input: {
     p_entity_id: applicationId,
     p_action: "submitted",
     p_after: { stage: stage.key },
+  });
+
+  await sendTemplatedEmail({
+    tenantId: tenant.id,
+    applicationId,
+    templateKey: "submission_received",
+    fallbackSubject: "We received your application — {{school_name}}",
+    fallbackBody:
+      "Hi {{guardian_name}},\n\nThanks! We received the application for {{student_first_name}} (grade {{grade}}, {{period_name}}).\n\nNext step: upload any required documents in your family portal: {{portal_url}}\n\n— {{school_name}}",
   });
 
   revalidatePath(`/s/${school}/portal/applications/${applicationId}`);
