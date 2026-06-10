@@ -1,37 +1,78 @@
 import { requireStaff } from "@/lib/tenant";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/server";
+import { PipelineView, type PipelineApplication } from "./pipeline-view";
 
-export const metadata = { title: "Admin" };
+export const metadata = { title: "Pipeline" };
 
-export default async function AdminDashboardPage({
+interface AppRow {
+  id: string;
+  grade_applying: string;
+  submitted_at: string | null;
+  payment_status: string;
+  fee_waived: boolean;
+  created_at: string;
+  stage_id: string;
+  students: { first_name: string; last_name: string } | null;
+  enrollment_periods: { name: string } | null;
+  application_documents: { status: string }[];
+}
+
+export default async function AdminPipelinePage({
   params,
 }: {
   params: Promise<{ school: string }>;
 }) {
   const { school } = await params;
   const { tenant } = await requireStaff(school);
+  const supabase = await createClient();
+
+  const [{ data: stages }, { data: applications }, { data: capacities }] = await Promise.all([
+    supabase
+      .from("pipeline_stages")
+      .select("id, key, label, category, position")
+      .eq("tenant_id", tenant.id)
+      .order("position")
+      .overrideTypes<{ id: string; key: string; label: string; category: string; position: number }[]>(),
+    supabase
+      .from("applications")
+      .select(
+        "id, grade_applying, submitted_at, payment_status, fee_waived, created_at, stage_id, students ( first_name, last_name ), enrollment_periods ( name ), application_documents ( status )"
+      )
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false })
+      .overrideTypes<AppRow[]>(),
+    supabase
+      .from("grade_capacities")
+      .select("grade, seats")
+      .eq("tenant_id", tenant.id)
+      .overrideTypes<{ grade: string; seats: number }[]>(),
+  ]);
+
+  const rows: PipelineApplication[] = (applications ?? []).map((a) => ({
+    id: a.id,
+    studentName: a.students ? `${a.students.first_name} ${a.students.last_name}` : "Student",
+    grade: a.grade_applying,
+    period: a.enrollment_periods?.name ?? "",
+    stageId: a.stage_id,
+    submittedAt: a.submitted_at,
+    paymentStatus: a.payment_status,
+    feeWaived: a.fee_waived,
+    docsVerified: a.application_documents.filter((d) => d.status === "verified").length,
+    docsTotal: a.application_documents.length,
+  }));
+
+  // Capacity tracking: enrolled/accepted count vs seats per grade.
+  const acceptedCategories = new Set(["accepted", "enrolled"]);
+  const acceptedStageIds = new Set(
+    (stages ?? []).filter((s) => acceptedCategories.has(s.category)).map((s) => s.id)
+  );
+  const capacity = (capacities ?? []).map((c) => ({
+    grade: c.grade,
+    seats: c.seats,
+    filled: rows.filter((r) => r.grade === c.grade && acceptedStageIds.has(r.stageId)).length,
+  }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Welcome to {tenant.name}</h1>
-        <p className="text-muted-foreground">
-          Your enrollment pipeline will appear here once applications start coming in.
-        </p>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Getting started</CardTitle>
-          <CardDescription>
-            Next up: build your application form, set your enrollment period and grade
-            capacities, then share your application link with families.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Application link:{" "}
-          <span className="font-mono text-foreground">/s/{tenant.slug}</span>
-        </CardContent>
-      </Card>
-    </div>
+    <PipelineView school={school} stages={stages ?? []} applications={rows} capacity={capacity} />
   );
 }

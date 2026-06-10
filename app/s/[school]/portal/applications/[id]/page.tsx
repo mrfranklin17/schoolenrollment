@@ -4,6 +4,8 @@ import { requireMember } from "@/lib/tenant";
 import { createClient } from "@/lib/supabase/server";
 import { formSchemaSchema, type FormResponses } from "@/lib/forms/schema";
 import { Badge } from "@/components/ui/badge";
+import { DocumentChecklist, type ChecklistDocument } from "@/components/documents/document-checklist";
+import { Separator } from "@/components/ui/separator";
 import { ApplicationEditor } from "./application-editor";
 
 export const metadata = { title: "Application" };
@@ -25,7 +27,7 @@ export default async function ApplicationPage({
   params: Promise<{ school: string; id: string }>;
 }) {
   const { school, id } = await params;
-  await requireMember(school);
+  const { tenant } = await requireMember(school);
   const supabase = await createClient();
 
   const { data: application } = await supabase
@@ -47,6 +49,34 @@ export default async function ApplicationPage({
   const parsed = version ? formSchemaSchema.safeParse(version.schema) : null;
   if (!parsed?.success) notFound();
 
+  let checklist: ChecklistDocument[] = [];
+  if (application.submitted_at) {
+    const { data: documents } = await supabase
+      .from("application_documents")
+      .select(
+        "id, status, file_name, rejection_reason, document_requirements ( name, description, required )"
+      )
+      .eq("application_id", id)
+      .overrideTypes<
+        {
+          id: string;
+          status: string;
+          file_name: string | null;
+          rejection_reason: string | null;
+          document_requirements: { name: string; description: string | null; required: boolean } | null;
+        }[]
+      >();
+    checklist = (documents ?? []).map((d) => ({
+      id: d.id,
+      name: d.document_requirements?.name ?? "Document",
+      description: d.document_requirements?.description ?? null,
+      required: d.document_requirements?.required ?? false,
+      status: d.status,
+      fileName: d.file_name,
+      rejectionReason: d.rejection_reason,
+    }));
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -65,6 +95,17 @@ export default async function ApplicationPage({
       </div>
       {parsed.data.description && (
         <p className="text-sm text-muted-foreground">{parsed.data.description}</p>
+      )}
+      {application.submitted_at && checklist.length > 0 && (
+        <>
+          <DocumentChecklist
+            school={school}
+            tenantId={tenant.id}
+            applicationId={application.id}
+            documents={checklist}
+          />
+          <Separator />
+        </>
       )}
       <ApplicationEditor
         school={school}
