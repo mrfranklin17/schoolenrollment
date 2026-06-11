@@ -58,6 +58,21 @@ export async function requireStaff(slug: string) {
   return { tenant, user, role };
 }
 
+/**
+ * Staff check for route handlers (returns null instead of redirecting so the
+ * handler can respond 403).
+ */
+export async function getStaffContext(slug: string) {
+  const supabase = await createClient();
+  const { data: tenant } = await supabase
+    .rpc("get_tenant_public", { p_slug: slug })
+    .maybeSingle<TenantPublic>();
+  if (!tenant) return null;
+  const role = await getMembershipRole(tenant.id);
+  if (role !== "school_admin" && role !== "staff") return null;
+  return { tenant, role };
+}
+
 /** Require any membership (guardian included); redirects to login otherwise. */
 export async function requireMember(slug: string) {
   const tenant = await getTenantBySlug(slug);
