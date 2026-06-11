@@ -6,6 +6,7 @@ import {
   createDocumentRequirement,
   createPeriod,
   setGradeCapacity,
+  updateBranding,
   type ActionState,
 } from "@/lib/admin/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,6 +22,62 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GRADES } from "@/lib/types";
+
+export function BrandingForm({
+  school,
+  initial,
+}: {
+  school: string;
+  initial: { name: string; logoUrl: string; primaryColor: string };
+}) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(
+    updateBranding,
+    undefined
+  );
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <input type="hidden" name="school" value={school} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="brand-name">School name</Label>
+          <Input id="brand-name" name="name" defaultValue={initial.name} required />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="brand-color">Primary color</Label>
+          <Input
+            id="brand-color"
+            name="primaryColor"
+            defaultValue={initial.primaryColor}
+            placeholder="#1d4ed8"
+          />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="brand-logo">Logo URL</Label>
+        <Input
+          id="brand-logo"
+          name="logoUrl"
+          defaultValue={initial.logoUrl}
+          placeholder="https://your-school.org/logo.png"
+        />
+      </div>
+      {state?.error && (
+        <Alert variant="destructive">
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
+      )}
+      {state?.ok && (
+        <Alert>
+          <AlertDescription>Branding saved.</AlertDescription>
+        </Alert>
+      )}
+      <Button type="submit" disabled={pending}>
+        {pending ? "Saving…" : "Save branding"}
+      </Button>
+    </form>
+  );
+}
 
 export function NewPeriodForm({ school }: { school: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(

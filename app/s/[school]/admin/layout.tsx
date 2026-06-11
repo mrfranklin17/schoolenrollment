@@ -10,6 +10,7 @@ const NAV = [
   { href: "/lottery", label: "Lottery" },
   { href: "/communications", label: "Communications" },
   { href: "/data", label: "Import / Export" },
+  { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
 ];
 

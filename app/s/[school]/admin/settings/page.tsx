@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CapacityForm, NewPeriodForm, NewRequirementForm } from "./settings-forms";
+import { BrandingForm, CapacityForm, NewPeriodForm, NewRequirementForm } from "./settings-forms";
 
 export const metadata = { title: "Settings" };
 
@@ -63,9 +63,44 @@ export default async function SettingsPage({ params }: { params: Promise<{ schoo
       .overrideTypes<RequirementRow[]>(),
   ]);
 
+  const { data: tenantRow } = await supabase
+    .from("tenants")
+    .select("name, logo_url, primary_color, trial_ends_at, subscription_status")
+    .eq("id", tenant.id)
+    .maybeSingle<{
+      name: string;
+      logo_url: string | null;
+      primary_color: string | null;
+      trial_ends_at: string;
+      subscription_status: string;
+    }>();
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Branding</CardTitle>
+          <CardDescription>
+            Shown on your school landing page and family portal. Subscription:{" "}
+            <Badge variant="secondary">{tenantRow?.subscription_status ?? "trialing"}</Badge>
+            {tenantRow?.subscription_status === "trialing" && tenantRow.trial_ends_at && (
+              <> · trial ends {new Date(tenantRow.trial_ends_at).toLocaleDateString()}</>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BrandingForm
+            school={school}
+            initial={{
+              name: tenantRow?.name ?? tenant.name,
+              logoUrl: tenantRow?.logo_url ?? "",
+              primaryColor: tenantRow?.primary_color ?? "",
+            }}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -81,6 +81,44 @@ export async function setGradeCapacity(
   return { ok: true };
 }
 
+const brandingSchema = z.object({
+  school: z.string().min(1),
+  name: z.string().min(2, "School name is required"),
+  logoUrl: z.union([z.string().url("Logo must be a valid URL"), z.literal("")]),
+  primaryColor: z
+    .union([z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #1d4ed8"), z.literal("")]),
+});
+
+export async function updateBranding(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const parsed = brandingSchema.safeParse({
+    school: formData.get("school"),
+    name: formData.get("name"),
+    logoUrl: formData.get("logoUrl") ?? "",
+    primaryColor: formData.get("primaryColor") ?? "",
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+
+  const { tenant, role } = await requireStaff(parsed.data.school);
+  if (role !== "school_admin") return { error: "Only school admins can change branding" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tenants")
+    .update({
+      name: parsed.data.name,
+      logo_url: parsed.data.logoUrl || null,
+      primary_color: parsed.data.primaryColor || null,
+    })
+    .eq("id", tenant.id);
+
+  if (error) return { error: "Could not update branding" };
+  revalidatePath(`/s/${parsed.data.school}`, "layout");
+  return { ok: true };
+}
+
 const requirementSchema = z.object({
   school: z.string().min(1),
   periodId: z.string().uuid().optional(),
