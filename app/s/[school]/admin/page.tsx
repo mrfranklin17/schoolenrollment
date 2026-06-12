@@ -72,7 +72,29 @@ export default async function AdminPipelinePage({
     filled: rows.filter((r) => r.grade === c.grade && acceptedStageIds.has(r.stageId)).length,
   }));
 
+  const stageById = new Map((stages ?? []).map((s) => [s.id, s]));
+  const countByCategory = (categories: string[]) =>
+    rows.filter((r) => categories.includes(stageById.get(r.stageId)?.category ?? "")).length;
+
+  const stats = [
+    { label: "Applications", value: rows.length },
+    { label: "Submitted", value: rows.filter((r) => r.submittedAt).length },
+    { label: "Offers out", value: countByCategory(["offered"]) },
+    { label: "Accepted + enrolled", value: countByCategory(["accepted", "enrolled"]) },
+    { label: "Waitlisted", value: countByCategory(["waitlisted"]) },
+  ];
+
   return (
-    <PipelineView school={school} stages={stages ?? []} applications={rows} capacity={capacity} />
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {stats.map((stat) => (
+          <div key={stat.label} className="rounded-xl border bg-card px-4 py-3 shadow-sm">
+            <p className="text-2xl font-extrabold text-foreground">{stat.value}</p>
+            <p className="text-xs font-semibold text-muted-foreground">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+      <PipelineView school={school} stages={stages ?? []} applications={rows} capacity={capacity} />
+    </div>
   );
 }

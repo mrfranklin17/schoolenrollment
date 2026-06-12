@@ -5,6 +5,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { moveApplications } from "@/lib/admin/pipeline-actions";
+import { stageChipClass, stageDotClass } from "@/lib/stage-style";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -191,7 +193,14 @@ export function PipelineView({
                     </TableCell>
                     <TableCell>{a.grade}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{stageById.get(a.stageId)?.label ?? "—"}</Badge>
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold",
+                          stageChipClass(stageById.get(a.stageId)?.category)
+                        )}
+                      >
+                        {stageById.get(a.stageId)?.label ?? "—"}
+                      </span>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {a.docsTotal > 0 ? `${a.docsVerified}/${a.docsTotal} verified` : "—"}
@@ -218,16 +227,19 @@ export function PipelineView({
             {stages.map((stage) => {
               const cards = filtered.filter((a) => a.stageId === stage.id);
               return (
-                <Card key={stage.id} className="w-72 shrink-0">
+                <Card key={stage.id} className="w-72 shrink-0 bg-muted/40">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center justify-between text-sm">
-                      {stage.label}
+                      <span className="flex items-center gap-2">
+                        <span className={cn("h-2.5 w-2.5 rounded-full", stageDotClass(stage.category))} />
+                        {stage.label}
+                      </span>
                       <Badge variant="secondary">{cards.length}</Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {cards.map((a) => (
-                      <div key={a.id} className="rounded-md border p-3">
+                      <div key={a.id} className="rounded-lg border bg-card p-3 shadow-sm">
                         <Link
                           href={`/s/${school}/admin/applications/${a.id}`}
                           className="font-medium underline-offset-2 hover:underline"

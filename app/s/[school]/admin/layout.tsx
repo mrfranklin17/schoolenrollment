@@ -1,18 +1,10 @@
 import Link from "next/link";
+import { GraduationCap } from "lucide-react";
 
 import { requireStaff } from "@/lib/tenant";
 import { signOut } from "@/lib/auth/actions";
+import { AdminNav } from "@/components/admin/admin-nav";
 import { Button } from "@/components/ui/button";
-
-const NAV = [
-  { href: "", label: "Pipeline" },
-  { href: "/forms", label: "Forms" },
-  { href: "/lottery", label: "Lottery" },
-  { href: "/communications", label: "Communications" },
-  { href: "/data", label: "Import / Export" },
-  { href: "/reports", label: "Reports" },
-  { href: "/settings", label: "Settings" },
-];
 
 export default async function AdminLayout({
   children,
@@ -25,33 +17,56 @@ export default async function AdminLayout({
   const { tenant } = await requireStaff(school);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-4">
-          <div className="flex items-center gap-6 overflow-x-auto">
-            <Link href={`/s/${school}/admin`} className="shrink-0 font-semibold">
-              {tenant.name}
-            </Link>
-            <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-              {NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={`/s/${school}/admin${item.href}`}
-                  className="shrink-0 hover:text-foreground"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <form action={signOut}>
-            <Button variant="ghost" size="sm" type="submit">
+    <div className="flex min-h-screen flex-col md:flex-row">
+      {/* Sidebar (top bar on mobile) */}
+      <aside className="bg-navy text-navy-foreground md:flex md:w-60 md:shrink-0 md:flex-col">
+        <div className="flex items-center justify-between gap-2 px-4 py-4 md:block">
+          <Link href={`/s/${school}/admin`} className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--brand)] text-white">
+              <GraduationCap className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-extrabold leading-tight text-white">
+                {tenant.name}
+              </span>
+              <span className="block text-[11px] font-semibold uppercase tracking-wide text-white/50">
+                Admissions
+              </span>
+            </span>
+          </Link>
+          <form action={signOut} className="md:hidden">
+            <Button variant="ghost" size="sm" className="text-white/70 hover:bg-white/10 hover:text-white">
               Sign out
             </Button>
           </form>
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
+        <div className="px-3 pb-3 md:flex-1 md:pb-4">
+          <AdminNav school={school} />
+        </div>
+        <div className="hidden border-t border-white/10 px-3 py-3 md:block">
+          <div className="flex items-center justify-between gap-2">
+            <Link
+              href={`/s/${school}`}
+              className="truncate text-xs font-semibold text-white/55 hover:text-white"
+            >
+              View family page ↗
+            </Link>
+            <form action={signOut}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-white/70 hover:bg-white/10 hover:text-white"
+              >
+                Sign out
+              </Button>
+            </form>
+          </div>
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 px-4 py-6 md:px-8">
+        <div className="mx-auto w-full max-w-6xl">{children}</div>
+      </main>
     </div>
   );
 }
