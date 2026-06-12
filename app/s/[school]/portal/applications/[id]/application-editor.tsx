@@ -83,7 +83,7 @@ export function ApplicationEditor({
         </Alert>
       )}
       <Separator />
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <div className="sticky bottom-0 -mx-4 flex flex-col-reverse gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:border-0 sm:bg-transparent sm:p-0">
         <Button variant="outline" onClick={save} disabled={pending}>
           {pending ? "Working…" : "Save draft"}
         </Button>
